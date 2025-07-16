@@ -1,0 +1,170 @@
+import pandas as pd
+df=pd.read_csv('/content/avg policy amount 2.csv')
+df.head()
+df['amount']=df['amount'].astype(float)
+df.head()
+df.isna().sum()
+df=df.dropna()
+df.isnull().sum()
+df.isna().sum()
+import numpy as np
+Q1=np.percentile(df['asset_price_usd'],0.25)
+Q3=np.percentile(df['asset_price_usd'],0.75)
+IQR=Q3-Q1
+Lower_bound=Q1-1.5*IQR
+Upper_bound=Q3+1.5*IQR
+outliers=df[(df['asset_price_usd']<Lower_bound) | (df['asset_price_usd']>Upper_bound)]
+print('outliers:',outliers)
+df=df.drop(outliers.index)
+df.head()
+df['amount'].unique()
+np.random.seed(42) # for reproducibility
+
+num_wallets = 1000
+dummy_data = {
+    'wallet_address': [f'wallet_{i}' for i in range(num_wallets)],
+    'num_transactions': np.random.randint(10, 1000, num_wallets),
+    'total_volume_usd': np.random.uniform(100, 100000, num_wallets),
+    'avg_transaction_amount_usd': np.random.uniform(5, 500, num_wallets),
+    'transaction_frequency_per_day': np.random.uniform(0.1, 10, num_wallets),
+    'balance_change_percent': np.random.uniform(-50, 200, num_wallets),
+    # Add more relevant features based on your data
+}
+
+dummy_df = pd.DataFrame(dummy_data)
+
+# --- Simple Feature Engineering (Conceptual) ---
+# We might create interaction terms or polynomial features later if needed.
+
+# --- Data Preparation ---
+from sklearn.preprocessing import MinMaxScaler
+
+# Select features for the model (excluding wallet address)
+features = dummy_df.drop('wallet_address', axis=1)
+
+# Scale the features
+scaler = MinMaxScaler()
+scaled_features = scaler.fit_transform(features)
+scaled_df = pd.DataFrame(scaled_features, columns=features.columns)
+
+# --- Model Selection and Training (Conceptual) ---
+# Since we don't have labeled credit scores (0-1000), this will be an unsupervised approach
+# or we'd need to define rules or use historical examples to create labels.
+# For demonstration, let's use a simple clustering approach or a rule-based system based on features.
+
+# Option 1: Rule-based scoring (Simple and transparent, but might not capture complex patterns)
+# We can assign scores based on a weighted sum of scaled features.
+# Let's assign arbitrary weights for demonstration (these should be determined based on domain knowledge or analysis)
+weights = {
+    'num_transactions': 0.2,
+    'total_volume_usd': 0.3,
+    'avg_transaction_amount_usd': 0.1,
+    'transaction_frequency_per_day': 0.2,
+    'balance_change_percent': 0.2,
+}
+
+# Calculate a raw score (0 to 1)
+raw_score = scaled_df.dot(pd.Series(weights))
+
+# Scale the raw score to the 0-1000 range
+credit_score = raw_score * 1000
+
+# Ensure scores are within 0 and 1000
+credit_score = np.clip(credit_score, 0, 1000)
+
+dummy_df['credit_score'] = credit_score
+
+print("\nDummy Data with Calculated Credit Scores:")
+print(dummy_df.head())
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+
+# --- Prepare Data for Supervised Learning (Requires Labels) ---
+# To use a Random Forest Regressor, we need target labels (credit scores).
+# Since we don't have real labels, we'll use the rule-based credit score calculated earlier as a proxy target for demonstration.
+# In a real scenario, you would need historical data with actual credit scores or define a labeling process.
+
+X = scaled_df  # Features
+y = dummy_df['credit_score'] # Using the rule-based score as the target
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# --- Train the Random Forest Regressor ---
+# Initialize the Random Forest Regressor model
+# You can tune parameters like n_estimators (number of trees) and max_depth (depth of each tree)
+rf_regressor = RandomForestRegressor(n_estimators=100, random_state=42)
+
+# Train the model
+rf_regressor.fit(X_train, y_train)
+
+# --- Predict Credit Scores ---
+# Predict credit scores for all wallets in the original dummy_df
+predicted_credit_scores = rf_regressor.predict(scaled_features)
+
+# Ensure predicted scores are within the 0-1000 range
+predicted_credit_scores = np.clip(predicted_credit_scores, 0, 1000)
+
+# Add the predicted credit scores to the dummy_df
+dummy_df['credit_score_rf'] = predicted_credit_scores
+
+print("\nDummy Data with Random Forest Predicted Credit Scores:")
+print(dummy_df[['wallet_address', 'credit_score_rf']].head())
+
+
+from sklearn.metrics import mean_squared_error
+mse = mean_squared_error(y_test, rf_regressor.predict(X_test))
+print(f"\nMean Squared Error on Test Data (using rule-based scores as target): {mse:.2f}")
+from sklearn.metrics import r2_score
+r2 = r2_score(y_test, rf_regressor.predict(X_test))
+print(f"R-squared (R2) Score on Test Data (using rule-based scores as target): {r2:.2f}")
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Distribution of Predicted Credit Scores
+plt.figure(figsize=(10, 6))
+sns.histplot(dummy_df['credit_score_rf'], bins=20, kde=True)
+plt.title('Distribution of Predicted Credit Scores (Random Forest)')
+plt.xlabel('Credit Score')
+plt.ylabel('Frequency')
+plt.grid(True)
+plt.show()
+
+# Scatter plot of a feature vs. Predicted Credit Score
+# Example: total_volume_usd vs. credit_score_rf
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=dummy_df, x='total_volume_usd', y='credit_score_rf', alpha=0.6)
+plt.title('Total Volume USD vs. Predicted Credit Score')
+plt.xlabel('Total Volume USD')
+plt.ylabel('Predicted Credit Score (Random Forest)')
+plt.grid(True)
+plt.show()
+
+# Relationship between two features (e.g., num_transactions and total_volume_usd)
+plt.figure(figsize=(10, 6))
+sns.scatterplot(data=dummy_df, x='num_transactions', y='total_volume_usd', alpha=0.6)
+plt.title('Number of Transactions vs. Total Volume USD')
+plt.xlabel('Number of Transactions')
+plt.ylabel('Total Volume USD')
+plt.grid(True)
+plt.show()
+
+# Box plot or Violin plot of a feature by Cluster
+plt.figure(figsize=(10, 6))
+sns.boxplot(data=dummy_df, x='cluster', y='total_volume_usd')
+plt.title('Total Volume USD by KMeans Cluster')
+plt.xlabel('Cluster')
+plt.ylabel('Total Volume USD')
+plt.grid(True)
+plt.show()
+
+# Feature Importance from Random Forest Regressor
+if hasattr(rf_regressor, 'feature_importances_'):
+  feature_importance = pd.Series(rf_regressor.feature_importances_, index=X.columns).sort_values(ascending=False)
+
+  plt.figure(figsize=(10, 6))
+  sns.barplot(x=feature_importance, y=feature_importance.index)
+  plt.title('Feature Importance from Random Forest Regressor')
+  plt.xlabel('Importance')
+  plt.ylabel('Feature')
+  plt.show()
