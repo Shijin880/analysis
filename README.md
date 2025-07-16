@@ -51,3 +51,62 @@ In a production environment, you would need to:
 6.  **Establish a scoring scale and interpretation:** Clearly define what different score ranges mean in terms of credit risk.
 
 The provided script serves as a good starting point for exploring different credit scoring concepts but requires significant further development and validation for real-world application.
+
+This code explores different approaches to assigning a "credit score" to cryptocurrency wallets based on their on-chain activity features. It demonstrates three conceptual methods:
+
+1.  **Rule-based Scoring:** This is a simple, transparent method where a score is calculated as a weighted sum of scaled features. The weights are assigned arbitrarily in this example but would ideally be determined by domain knowledge or analysis of feature importance. The final score is scaled to the 0-1000 range.
+
+2.  **Cluster-based Scoring:** This unsupervised learning approach uses K-Means clustering to group wallets with similar activity patterns. Each cluster is then assigned a general credit score range. The scores within each cluster are assigned randomly in this example, but in a real-world scenario, you would analyze the characteristics of each cluster to determine appropriate score ranges. This method can reveal natural groupings in the data but the score assignment within clusters is heuristic.
+
+3.  **Supervised Learning (Random Forest Regression):** This method treats the problem as a regression task. It uses a Random Forest Regressor to predict a credit score based on the wallet features. Since real credit score labels are not available in the provided dummy data, the rule-based scores calculated earlier are used as a proxy target variable for training. This demonstrates how a supervised model could be used *if* labeled data were available. The model learns complex non-linear relationships between features and the target score.
+
+**Complete Architecture:**
+
+The architecture is a multi-stage pipeline involving:
+
+1.  **Data Loading and Initial Preprocessing:** Loading data (simulated using dummy data), handling missing values (dropping rows), and addressing potential outliers (though the outlier detection and removal on `asset_price_usd` seems remnants of a previous context and not directly applied to the dummy data used for scoring).
+2.  **Feature Engineering (Conceptual):** While not explicitly shown beyond the initial features, this stage would involve creating new features from the raw data (e.g., ratios, interaction terms, time-based features).
+3.  **Data Preparation:** Scaling the features using `MinMaxScaler` to bring them into a similar range, which is crucial for distance-based algorithms like K-Means and can improve the performance of many models.
+4.  **Scoring/Modeling Approaches:**
+    *   **Rule-based:** Direct calculation based on scaled features and predefined weights.
+    *   **Clustering (K-Means):** Unsupervised grouping of wallets. Scores are then assigned based on cluster membership.
+    *   **Supervised Learning (Random Forest):** Training a regression model on features and a target variable (using the rule-based score as a proxy).
+5.  **Evaluation (for Supervised Learning):** Using metrics like Mean Squared Error (MSE) and R-squared (R2) to assess the performance of the Random Forest Regressor on the test set.
+
+**Processing Flow:**
+
+1.  **Load Data:** The code starts by loading (or generating, in this case) the wallet activity data.
+2.  **Handle Missing Values:** Rows with missing values are removed.
+3.  **Outlier Detection (on a potentially irrelevant column):** Outliers in the `asset_price_usd` column are identified and removed (this part of the code seems disconnected from the subsequent scoring using dummy data).
+4.  **Generate Dummy Data:** A synthetic dataset of wallet activities is created with various features.
+5.  **Select Features:** The `wallet_address` is dropped as it's an identifier, not a feature for modeling.
+6.  **Scale Features:** The selected features are scaled using `MinMaxScaler`.
+7.  **Apply Rule-based Scoring:**
+    *   Arbitrary weights are defined for each scaled feature.
+    *   A raw score (0-1) is calculated as the dot product of the scaled features and weights.
+    *   The raw score is scaled to the 0-1000 range.
+    *   Scores are clipped to ensure they are within 0 and 1000.
+    *   The calculated rule-based score is added to the DataFrame.
+8.  **Apply Cluster-based Scoring:**
+    *   K-Means clustering is applied to the scaled features.
+    *   Cluster labels are assigned to each wallet.
+    *   Each cluster is mapped to a random credit score range (as a placeholder for domain-driven assignment).
+    *   Scores are clipped to ensure they are within 0 and 1000.
+    *   The calculated cluster-based score is added to the DataFrame.
+9.  **Prepare Data for Supervised Learning:**
+    *   The scaled features become the input (X).
+    *   The rule-based credit score is used as the target variable (y).
+    *   The data is split into training and testing sets.
+10. **Train Random Forest Regressor:**
+    *   A `RandomForestRegressor` model is initialized.
+    *   The model is trained on the training data (features X_train and target y_train).
+11. **Predict Credit Scores (using Random Forest):**
+    *   The trained Random Forest model is used to predict credit scores for *all* wallets (using the scaled features of the original dummy data).
+    *   Predicted scores are clipped to ensure they are within 0 and 1000.
+    *   The predicted Random Forest score is added to the DataFrame.
+12. **Evaluate Random Forest Model:**
+    *   The model's performance is evaluated on the test set (using the predicted scores against the test set's rule-based scores).
+    *   Mean Squared Error (MSE) and R-squared (R2) are calculated and printed.
+
+Each method provides a different perspective on assigning a credit score, ranging from simple heuristics to more complex data-driven approaches. The choice of method in a real application would depend on the availability of labeled data, the desired transparency, and the required accuracy.
+
