@@ -168,3 +168,79 @@ if hasattr(rf_regressor, 'feature_importances_'):
   plt.xlabel('Importance')
   plt.ylabel('Feature')
   plt.show()
+# Define score ranges
+score_ranges = range(0, 1001, 100)
+dummy_df['score_range'] = pd.cut(dummy_df['credit_score_rf'], bins=score_ranges, right=False, labels=[f'{i}-{i+99}' for i in score_ranges[:-1]])
+
+plt.figure(figsize=(12, 6))
+sns.countplot(data=dummy_df, x='score_range', order=[f'{i}-{i+99}' for i in score_ranges[:-1]])
+plt.title('Distribution of Predicted Credit Scores Across Ranges')
+plt.xlabel('Credit Score Range')
+plt.ylabel('Number of Wallets')
+plt.xticks(rotation=45, ha='right')
+plt.grid(axis='y', linestyle='--')
+plt.tight_layout()
+plt.show()
+
+# --- Behavior of Wallets in Lower Range (e.g., 0-200) ---
+lower_range_wallets = dummy_df[dummy_df['credit_score_rf'] < 200]
+
+print("\nAnalysis of Wallets in the Lower Score Range (0-200):")
+print(lower_range_wallets[['num_transactions', 'total_volume_usd', 'avg_transaction_amount_usd', 'transaction_frequency_per_day', 'balance_change_percent', 'credit_score_rf']].describe())
+
+# You can also visualize the feature distributions for the lower range
+lower_range_features = ['num_transactions', 'total_volume_usd', 'avg_transaction_amount_usd', 'transaction_frequency_per_day', 'balance_change_percent']
+plt.figure(figsize=(15, 10))
+for i, feature in enumerate(lower_range_features):
+    plt.subplot(2, 3, i + 1)
+    sns.histplot(lower_range_wallets[feature], kde=True)
+    plt.title(f'Dist. of {feature} (Lower Score Wallets)')
+plt.tight_layout()
+plt.show()
+
+
+# --- Behavior of Wallets in Higher Range (e.g., 800-1000) ---
+higher_range_wallets = dummy_df[dummy_df['credit_score_rf'] >= 800]
+
+print("\nAnalysis of Wallets in the Higher Score Range (800-1000):")
+print(higher_range_wallets[['num_transactions', 'total_volume_usd', 'avg_transaction_amount_usd', 'transaction_frequency_per_day', 'balance_change_percent', 'credit_score_rf']].describe())
+
+# Visualize the feature distributions for the higher range
+plt.figure(figsize=(15, 10))
+for i, feature in enumerate(lower_range_features): # Using the same features for comparison
+    plt.subplot(2, 3, i + 1)
+    sns.histplot(higher_range_wallets[feature], kde=True)
+    plt.title(f'Dist. of {feature} (Higher Score Wallets)')
+plt.tight_layout()
+plt.show()
+
+# --- Comparison of Feature Means between Low and High Score Wallets ---
+comparison_data = pd.DataFrame({
+    'Feature': lower_range_features,
+    'Mean_Lower_Range': lower_range_wallets[lower_range_features].mean().values,
+    'Mean_Higher_Range': higher_range_wallets[lower_range_features].mean().values
+})
+
+print("\nComparison of Feature Means (Lower vs. Higher Score Wallets):")
+print(comparison_data)
+
+# You can also visualize this comparison
+comparison_data.set_index('Feature').plot(kind='bar', figsize=(10, 6))
+plt.title('Mean Feature Values by Score Range')
+plt.ylabel('Mean Value')
+plt.xticks(rotation=45, ha='right')
+plt.grid(axis='y', linestyle='--')
+plt.tight_layout()
+plt.show()
+
+# --- Potential Further Analysis Ideas for Github ---
+# Correlation Matrix: Show correlations between features and predicted score.
+plt.figure(figsize=(10, 8))
+sns.heatmap(dummy_df[['num_transactions', 'total_volume_usd', 'avg_transaction_amount_usd', 'transaction_frequency_per_day', 'balance_change_percent', 'credit_score_rf']].corr(), annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Correlation Matrix of Features and Predicted Score')
+plt.show()
+
+# 2. Pairplot: Visualize relationships between pairs of features, colored by score range (requires defining fewer ranges for clarity).
+sns.pairplot(dummy_df[['num_transactions', 'total_volume_usd', 'credit_score_rf', 'score_range']], hue='score_range')
+plt.show()
+
